@@ -190,6 +190,7 @@
 
         .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .btn-success { background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); }
+        .btn-shopee { background: linear-gradient(135deg, #ee4d2d 0%, #ff6340 100%); }
         .btn-warning { background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%); }
         .btn-purple { background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%); }
         .btn-danger { background: linear-gradient(135deg, #fc8181 0%, #f56565 100%); }
@@ -295,9 +296,14 @@
             <div id="linksDisplay" class="links-display empty">
                 Chưa có link nào được tách
             </div>
-            <button id="copyLinksBtn" class="btn-success" disabled>
-                📋 Copy Tất Cả Link
-            </button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
+                <button id="copyLinksBtn" class="btn-success" disabled>
+                    📋 Copy All
+                </button>
+                <button id="shopeeConvertBtn" class="btn-shopee" disabled>
+                    🛍️ Shopee
+                </button>
+            </div>
         </div>
 
         <!-- Bước 3 -->
@@ -351,6 +357,7 @@
         // Event listeners
         document.getElementById('extractBtn').addEventListener('click', extractLinks);
         document.getElementById('copyLinksBtn').addEventListener('click', copyExtractedLinks);
+        document.getElementById('shopeeConvertBtn').addEventListener('click', convertToShopee);
         document.getElementById('replaceBtn').addEventListener('click', replaceLinks);
         document.getElementById('copyResultBtn').addEventListener('click', copyResult);
         document.getElementById('resetBtn').addEventListener('click', resetAll);
@@ -390,6 +397,7 @@
 
             linksCount.textContent = `Link Đã Tách (${extractedLinks.length})`;
             document.getElementById('copyLinksBtn').disabled = false;
+            document.getElementById('shopeeConvertBtn').disabled = false;
             document.getElementById('replaceBtn').disabled = false;
             showToast(`✅ Đã tách ${extractedLinks.length} link`);
         }
@@ -402,6 +410,24 @@
                 showToast('✅ Đã copy link');
             }).catch(() => {
                 showToast('❌ Lỗi copy');
+            });
+        }
+
+        // Chuyển đổi Shopee
+        function convertToShopee() {
+            if (extractedLinks.length === 0) return;
+
+            // Copy link trước
+            navigator.clipboard.writeText(extractedLinks.join('\n')).then(() => {
+                showToast('✅ Đã copy! Mở Shopee...');
+                // Mở trang Shopee Custom Link sau 500ms
+                setTimeout(() => {
+                    window.open('https://s.shopee.vn/7V7cEveG0o', '_blank');
+                }, 500);
+            }).catch(() => {
+                // Nếu copy lỗi, vẫn mở trang Shopee
+                showToast('⚠️ Mở Shopee, tự copy link');
+                window.open('https://s.shopee.vn/7V7cEveG0o', '_blank');
             });
         }
 
@@ -463,6 +489,7 @@
             
             document.getElementById('linksCount').textContent = 'Link Đã Tách (0)';
             document.getElementById('copyLinksBtn').disabled = true;
+            document.getElementById('shopeeConvertBtn').disabled = true;
             document.getElementById('replaceBtn').disabled = true;
             document.getElementById('copyResultBtn').disabled = true;
             
