@@ -159,6 +159,26 @@
             word-break: break-all;
             line-height: 1.5;
             font-size: 12px;
+            flex: 1;
+        }
+
+        .copy-single-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .copy-single-btn:active {
+            transform: scale(0.95);
+            background: #5a67d8;
         }
 
         button {
@@ -390,8 +410,11 @@
             linksDisplay.className = 'links-display';
             linksDisplay.innerHTML = extractedLinks.map((link, index) => `
                 <div class="link-item">
-                    <span class="link-badge">${index + 1}</span>
-                    <span class="link-text">${link}</span>
+                    <div class="link-content">
+                        <span class="link-badge">${index + 1}</span>
+                        <span class="link-text">${link}</span>
+                    </div>
+                    <button class="copy-single-btn" onclick="copySingleLink('${link.replace(/'/g, "\\'")}')">Copy</button>
                 </div>
             `).join('');
 
@@ -400,6 +423,15 @@
             document.getElementById('shopeeConvertBtn').disabled = false;
             document.getElementById('replaceBtn').disabled = false;
             showToast(`✅ Đã tách ${extractedLinks.length} link`);
+        }
+
+        // Copy single link
+        function copySingleLink(link) {
+            navigator.clipboard.writeText(link).then(() => {
+                showToast('✅ Đã copy link');
+            }).catch(() => {
+                showToast('❌ Lỗi copy');
+            });
         }
 
         // Copy links
