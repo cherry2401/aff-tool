@@ -159,26 +159,6 @@
             word-break: break-all;
             line-height: 1.5;
             font-size: 12px;
-            flex: 1;
-        }
-
-        .copy-single-btn {
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 6px 12px;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: pointer;
-            white-space: nowrap;
-            flex-shrink: 0;
-            transition: all 0.2s;
-        }
-
-        .copy-single-btn:active {
-            transform: scale(0.95);
-            background: #5a67d8;
         }
 
         button {
@@ -410,11 +390,8 @@
             linksDisplay.className = 'links-display';
             linksDisplay.innerHTML = extractedLinks.map((link, index) => `
                 <div class="link-item">
-                    <div class="link-content">
-                        <span class="link-badge">${index + 1}</span>
-                        <span class="link-text">${link}</span>
-                    </div>
-                    <button class="copy-single-btn" onclick="copySingleLink('${link.replace(/'/g, "\\'")}')">Copy</button>
+                    <span class="link-badge">${index + 1}</span>
+                    <span class="link-text">${link}</span>
                 </div>
             `).join('');
 
@@ -425,42 +402,52 @@
             showToast(`✅ Đã tách ${extractedLinks.length} link`);
         }
 
-        // Copy single link
-        function copySingleLink(link) {
-            navigator.clipboard.writeText(link).then(() => {
-                showToast('✅ Đã copy link');
-            }).catch(() => {
-                showToast('❌ Lỗi copy');
-            });
-        }
-
-        // Copy links
+        // Copy links - dùng xuống dòng thật (Enter) thay vì \n
         function copyExtractedLinks() {
             if (extractedLinks.length === 0) return;
 
-            navigator.clipboard.writeText(extractedLinks.join('\n')).then(() => {
+            // Tạo textarea ẩn để copy với xuống dòng thật
+            const textarea = document.createElement('textarea');
+            textarea.value = extractedLinks.join('\n');
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                document.execCommand('copy');
                 showToast('✅ Đã copy link');
-            }).catch(() => {
+            } catch (err) {
                 showToast('❌ Lỗi copy');
-            });
+            }
+            
+            document.body.removeChild(textarea);
         }
 
-        // Chuyển đổi Shopee
+        // Chuyển đổi Shopee - dùng xuống dòng thật
         function convertToShopee() {
             if (extractedLinks.length === 0) return;
 
-            // Copy link trước
-            navigator.clipboard.writeText(extractedLinks.join('\n')).then(() => {
+            // Tạo textarea ẩn để copy
+            const textarea = document.createElement('textarea');
+            textarea.value = extractedLinks.join('\n');
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                document.execCommand('copy');
                 showToast('✅ Đã copy! Mở Shopee...');
-                // Mở trang Shopee Custom Link sau 500ms
                 setTimeout(() => {
                     window.open('https://s.shopee.vn/7V7cEveG0o', '_blank');
                 }, 500);
-            }).catch(() => {
-                // Nếu copy lỗi, vẫn mở trang Shopee
+            } catch (err) {
                 showToast('⚠️ Mở Shopee, tự copy link');
                 window.open('https://s.shopee.vn/7V7cEveG0o', '_blank');
-            });
+            }
+            
+            document.body.removeChild(textarea);
         }
 
         // Thay thế links
