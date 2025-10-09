@@ -1,530 +1,167 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Link Replacer - Tách & Gộp Link</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+let extractedLinks = [];
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 12px;
-            padding-bottom: 80px;
-        }
+// Đợi DOM load xong
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Extension loaded!');
+    
+    // Gắn event listeners
+    const extractBtn = document.getElementById('extractBtn');
+    const copyLinksBtn = document.getElementById('copyLinksBtn');
+    const replaceBtn = document.getElementById('replaceBtn');
+    const copyResultBtn = document.getElementById('copyResultBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    
+    console.log('Buttons:', {extractBtn, copyLinksBtn, replaceBtn, copyResultBtn, resetBtn});
+    
+    if (extractBtn) extractBtn.addEventListener('click', extractLinks);
+    if (copyLinksBtn) copyLinksBtn.addEventListener('click', copyExtractedLinks);
+    if (replaceBtn) replaceBtn.addEventListener('click', replaceLinks);
+    if (copyResultBtn) copyResultBtn.addEventListener('click', copyResult);
+    if (resetBtn) {
+        console.log('Reset button found, attaching listener...');
+        resetBtn.addEventListener('click', function() {
+            console.log('Reset button clicked!');
+            resetAll();
+        });
+    } else {
+        console.error('Reset button NOT found!');
+    }
+});
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
+// Hàm tách link
+function extractLinks() {
+    console.log('Bắt đầu tách link...');
+    const textarea = document.getElementById('originalText');
+    const text = textarea.value;
+    
+    console.log('Nội dung:', text);
+    
+    if (!text.trim()) {
+        console.warn('Chưa có nội dung');
+        return;
+    }
 
-        .header {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-            text-align: center;
-        }
+    // Regex tìm URL
+    const urlRegex = /(https?:\/\/[^\s\)]+)/gi;
+    const matches = text.match(urlRegex);
+    
+    console.log('Matches:', matches);
+    
+    extractedLinks = matches ? matches.map(url => url.trim()) : [];
 
-        .header h1 {
-            color: #667eea;
-            font-size: clamp(18px, 5vw, 24px);
-            margin-bottom: 8px;
-        }
+    // Hiển thị danh sách link
+    const linksDisplay = document.getElementById('linksDisplay');
+    const linksCount = document.getElementById('linksCount');
+    
+    if (extractedLinks.length === 0) {
+        linksDisplay.className = 'links-display empty';
+        linksDisplay.textContent = 'Không tìm thấy link nào';
+        linksCount.textContent = 'Link Đã Tách (0)';
+        document.getElementById('copyLinksBtn').disabled = true;
+        document.getElementById('replaceBtn').disabled = true;
+        return;
+    }
 
-        .header p {
-            color: #718096;
-            font-size: 13px;
-        }
-
-        .section {
-            background: white;
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .section-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 12px;
-            padding: 12px;
-            border-radius: 12px;
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-        }
-
-        .step-badge {
-            background: rgba(255,255,255,0.3);
-            min-width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            font-weight: bold;
-            flex-shrink: 0;
-        }
-
-        .step-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .step-2 { background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); }
-        .step-3 { background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%); }
-        .step-4 { background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%); }
-
-        textarea {
-            width: 100%;
-            padding: 14px;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            font-size: 14px;
-            font-family: inherit;
-            resize: vertical;
-            min-height: 120px;
-            transition: all 0.3s;
-            -webkit-appearance: none;
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .links-display, .result-display {
-            background: #f7fafc;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 14px;
-            min-height: 120px;
-            max-height: 200px;
-            overflow-y: auto;
-            font-size: 13px;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .links-display.empty, .result-display.empty {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #a0aec0;
-            font-style: italic;
-        }
-
-        .result-display {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            color: #2d3748;
-            line-height: 1.6;
-        }
-
-        .link-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            padding: 10px;
-            background: white;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-        }
-
-        .link-badge {
-            background: #667eea;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: bold;
-            min-width: 28px;
-            text-align: center;
-            flex-shrink: 0;
-        }
-
-        .link-text {
-            color: #2d3748;
-            word-break: break-all;
-            line-height: 1.5;
-            font-size: 12px;
-        }
-
-        button {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: bold;
-            cursor: pointer;
-            color: white;
-            margin-top: 12px;
-            transition: all 0.3s;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            -webkit-appearance: none;
-            touch-action: manipulation;
-        }
-
-        button:active {
-            transform: scale(0.98);
-        }
-
-        button:disabled {
-            background: #cbd5e0 !important;
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .btn-success { background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); }
-        .btn-shopee { background: linear-gradient(135deg, #ee4d2d 0%, #ff6340 100%); }
-        .btn-warning { background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%); }
-        .btn-purple { background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%); }
-        .btn-danger { background: linear-gradient(135deg, #fc8181 0%, #f56565 100%); }
-
-        .reset-section {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
-        }
-
-        .reset-section button {
-            max-width: 800px;
-            margin: 0 auto;
-            display: block;
-        }
-
-        /* Toast notification */
-        .toast {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #2d3748;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 14px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .toast.show {
-            opacity: 1;
-        }
-
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e0;
-            border-radius: 3px;
-        }
-
-        @media (max-width: 480px) {
-            body {
-                padding: 8px;
-                padding-bottom: 70px;
-            }
-            
-            .section {
-                padding: 12px;
-            }
-            
-            textarea {
-                min-height: 100px;
-                font-size: 16px; /* Prevent zoom on iOS */
-            }
-            
-            button {
-                padding: 14px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>🔗 Link Replacer</h1>
-            <p>Tách & Gộp Link Nhanh Chóng</p>
+    linksDisplay.className = 'links-display';
+    linksDisplay.innerHTML = extractedLinks.map((link, index) => `
+        <div class="link-item">
+            <span class="link-badge">${index + 1}</span>
+            <span class="link-text">${link}</span>
         </div>
+    `).join('');
 
-        <!-- Bước 1 -->
-        <div class="section">
-            <div class="section-header step-1">
-                <span class="step-badge">1</span>
-                <span>Nhập Nội Dung Gốc</span>
-            </div>
-            <textarea id="originalText" placeholder="Dán nội dung có chứa link vào đây..."></textarea>
-            <button id="extractBtn" class="btn-primary">🔍 Tách Link</button>
-        </div>
+    linksCount.textContent = `Link Đã Tách (${extractedLinks.length})`;
+    document.getElementById('copyLinksBtn').disabled = false;
+    document.getElementById('replaceBtn').disabled = false;
 
-        <!-- Bước 2 -->
-        <div class="section">
-            <div class="section-header step-2">
-                <span class="step-badge">2</span>
-                <span id="linksCount">Link Đã Tách (0)</span>
-            </div>
-            <div id="linksDisplay" class="links-display empty">
-                Chưa có link nào được tách
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
-                <button id="copyLinksBtn" class="btn-success" disabled>
-                    📋 Copy All
-                </button>
-                <button id="shopeeConvertBtn" class="btn-shopee" disabled>
-                    🛍️ Shopee
-                </button>
-            </div>
-        </div>
+    console.log('✅ Đã tách được:', extractedLinks);
+}
 
-        <!-- Bước 3 -->
-        <div class="section">
-            <div class="section-header step-3">
-                <span class="step-badge">3</span>
-                <span>Nhập Link Mới</span>
-            </div>
-            <textarea id="newLinksText" placeholder="Dán link mới vào đây (mỗi link một dòng)..."></textarea>
-            <button id="replaceBtn" class="btn-warning" disabled>
-                ✨ Thay Thế Link
-            </button>
-        </div>
+// Copy link đã tách
+function copyExtractedLinks() {
+    if (extractedLinks.length === 0) return;
 
-        <!-- Bước 4 -->
-        <div class="section">
-            <div class="section-header step-4">
-                <span class="step-badge">4</span>
-                <span>Kết Quả Cuối Cùng</span>
-            </div>
-            <div id="resultDisplay" class="result-display empty">
-                Kết quả sẽ hiển thị ở đây
-            </div>
-            <button id="copyResultBtn" class="btn-purple" disabled>
-                📋 Copy Kết Quả
-            </button>
-        </div>
-    </div>
+    navigator.clipboard.writeText(extractedLinks.join('\n')).then(() => {
+        console.log('✅ Đã copy link');
+    }).catch(err => {
+        console.error('❌ Lỗi copy:', err);
+    });
+}
 
-    <!-- Reset Button (Fixed) -->
-    <div class="reset-section">
-        <button id="resetBtn" class="btn-danger">🔄 Làm Mới Tất Cả</button>
-    </div>
+// Thay thế link
+function replaceLinks() {
+    const originalText = document.getElementById('originalText').value;
+    const newLinksText = document.getElementById('newLinksText').value;
 
-    <!-- Toast Notification -->
-    <div id="toast" class="toast"></div>
+    if (!originalText.trim()) {
+        console.warn('Chưa có nội dung gốc');
+        return;
+    }
 
-    <script>
-        let extractedLinks = [];
+    if (!newLinksText.trim()) {
+        console.warn('Chưa có link mới');
+        return;
+    }
 
-        // Toast notification
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 2000);
-        }
+    // Tách link mới
+    const urlRegex = /(https?:\/\/[^\s\)]+)/gi;
+    const newLinks = newLinksText.match(urlRegex) || [];
 
-        // Event listeners
-        document.getElementById('extractBtn').addEventListener('click', extractLinks);
-        document.getElementById('copyLinksBtn').addEventListener('click', copyExtractedLinks);
-        document.getElementById('shopeeConvertBtn').addEventListener('click', convertToShopee);
-        document.getElementById('replaceBtn').addEventListener('click', replaceLinks);
-        document.getElementById('copyResultBtn').addEventListener('click', copyResult);
-        document.getElementById('resetBtn').addEventListener('click', resetAll);
+    // Kiểm tra số lượng
+    if (newLinks.length !== extractedLinks.length) {
+        console.warn(`❌ Số lượng không khớp! Cũ: ${extractedLinks.length}, Mới: ${newLinks.length}`);
+        return;
+    }
 
-        // Tách link
-        function extractLinks() {
-            const text = document.getElementById('originalText').value;
-            
-            if (!text.trim()) {
-                showToast('⚠️ Vui lòng nhập nội dung');
-                return;
-            }
+    // Thay thế
+    let result = originalText;
+    extractedLinks.forEach((oldLink, index) => {
+        result = result.replace(oldLink, newLinks[index]);
+    });
 
-            const urlRegex = /(https?:\/\/[^\s\)]+)/gi;
-            extractedLinks = (text.match(urlRegex) || []).map(url => url.trim());
+    // Hiển thị kết quả
+    const resultDisplay = document.getElementById('resultDisplay');
+    resultDisplay.className = 'result-display';
+    resultDisplay.textContent = result;
+    document.getElementById('copyResultBtn').disabled = false;
 
-            const linksDisplay = document.getElementById('linksDisplay');
-            const linksCount = document.getElementById('linksCount');
-            
-            if (extractedLinks.length === 0) {
-                linksDisplay.className = 'links-display empty';
-                linksDisplay.textContent = 'Không tìm thấy link nào';
-                linksCount.textContent = 'Link Đã Tách (0)';
-                document.getElementById('copyLinksBtn').disabled = true;
-                document.getElementById('replaceBtn').disabled = true;
-                showToast('⚠️ Không tìm thấy link');
-                return;
-            }
+    console.log('✅ Đã thay thế link');
+}
 
-            linksDisplay.className = 'links-display';
-            linksDisplay.innerHTML = extractedLinks.map((link, index) => `
-                <div class="link-item">
-                    <span class="link-badge">${index + 1}</span>
-                    <span class="link-text">${link}</span>
-                </div>
-            `).join('');
+// Copy kết quả
+function copyResult() {
+    const result = document.getElementById('resultDisplay').textContent;
+    
+    if (result && result !== 'Kết quả sẽ hiển thị ở đây') {
+        navigator.clipboard.writeText(result).then(() => {
+            console.log('✅ Đã copy kết quả');
+        }).catch(err => {
+            console.error('❌ Lỗi copy:', err);
+        });
+    }
+}
 
-            linksCount.textContent = `Link Đã Tách (${extractedLinks.length})`;
-            document.getElementById('copyLinksBtn').disabled = false;
-            document.getElementById('shopeeConvertBtn').disabled = false;
-            document.getElementById('replaceBtn').disabled = false;
-            showToast(`✅ Đã tách ${extractedLinks.length} link`);
-        }
-
-        // Copy links - dùng xuống dòng thật (Enter) thay vì \n
-        function copyExtractedLinks() {
-            if (extractedLinks.length === 0) return;
-
-            // Tạo textarea ẩn để copy với xuống dòng thật
-            const textarea = document.createElement('textarea');
-            textarea.value = extractedLinks.join('\n');
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            
-            try {
-                document.execCommand('copy');
-                showToast('✅ Đã copy link');
-            } catch (err) {
-                showToast('❌ Lỗi copy');
-            }
-            
-            document.body.removeChild(textarea);
-        }
-
-        // Chuyển đổi Shopee - dùng xuống dòng thật
-        function convertToShopee() {
-            if (extractedLinks.length === 0) return;
-
-            // Tạo textarea ẩn để copy
-            const textarea = document.createElement('textarea');
-            textarea.value = extractedLinks.join('\n');
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            
-            try {
-                document.execCommand('copy');
-                showToast('✅ Đã copy! Mở Shopee...');
-                setTimeout(() => {
-                    window.open('https://s.shopee.vn/7V7cEveG0o', '_blank');
-                }, 500);
-            } catch (err) {
-                showToast('⚠️ Mở Shopee, tự copy link');
-                window.open('https://s.shopee.vn/7V7cEveG0o', '_blank');
-            }
-            
-            document.body.removeChild(textarea);
-        }
-
-        // Thay thế links
-        function replaceLinks() {
-            const originalText = document.getElementById('originalText').value;
-            const newLinksText = document.getElementById('newLinksText').value;
-
-            if (!originalText.trim() || !newLinksText.trim()) {
-                showToast('⚠️ Thiếu nội dung');
-                return;
-            }
-
-            const urlRegex = /(https?:\/\/[^\s\)]+)/gi;
-            const newLinks = (newLinksText.match(urlRegex) || []).map(url => url.trim());
-
-            if (newLinks.length !== extractedLinks.length) {
-                showToast(`❌ Cần ${extractedLinks.length} link mới`);
-                return;
-            }
-
-            let result = originalText;
-            extractedLinks.forEach((oldLink, index) => {
-                result = result.replace(oldLink, newLinks[index]);
-            });
-
-            const resultDisplay = document.getElementById('resultDisplay');
-            resultDisplay.className = 'result-display';
-            resultDisplay.textContent = result;
-            document.getElementById('copyResultBtn').disabled = false;
-            showToast('✅ Đã thay thế link');
-        }
-
-        // Copy result
-        function copyResult() {
-            const result = document.getElementById('resultDisplay').textContent;
-            
-            if (result && result !== 'Kết quả sẽ hiển thị ở đây') {
-                navigator.clipboard.writeText(result).then(() => {
-                    showToast('✅ Đã copy kết quả');
-                }).catch(() => {
-                    showToast('❌ Lỗi copy');
-                });
-            }
-        }
-
-        // Reset
-        function resetAll() {
-            document.getElementById('originalText').value = '';
-            document.getElementById('newLinksText').value = '';
-            
-            const linksDisplay = document.getElementById('linksDisplay');
-            linksDisplay.className = 'links-display empty';
-            linksDisplay.textContent = 'Chưa có link nào được tách';
-            
-            const resultDisplay = document.getElementById('resultDisplay');
-            resultDisplay.className = 'result-display empty';
-            resultDisplay.textContent = 'Kết quả sẽ hiển thị ở đây';
-            
-            document.getElementById('linksCount').textContent = 'Link Đã Tách (0)';
-            document.getElementById('copyLinksBtn').disabled = true;
-            document.getElementById('shopeeConvertBtn').disabled = true;
-            document.getElementById('replaceBtn').disabled = true;
-            document.getElementById('copyResultBtn').disabled = true;
-            
-            extractedLinks = [];
-            showToast('🔄 Đã làm mới');
-        }
-
-        // Prevent zoom on double tap (iOS)
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', function(event) {
-            const now = Date.now();
-            if (now - lastTouchEnd <= 300) {
-                event.preventDefault();
-            }
-            lastTouchEnd = now;
-        }, false);
-    </script>
-</body>
-</html>
+// Reset tất cả
+function resetAll() {
+    console.log('Đang reset...');
+    
+    document.getElementById('originalText').value = '';
+    document.getElementById('newLinksText').value = '';
+    
+    const linksDisplay = document.getElementById('linksDisplay');
+    linksDisplay.className = 'links-display empty';
+    linksDisplay.textContent = 'Chưa có link nào được tách';
+    
+    const resultDisplay = document.getElementById('resultDisplay');
+    resultDisplay.className = 'result-display empty';
+    resultDisplay.textContent = 'Kết quả sẽ hiển thị ở đây';
+    
+    document.getElementById('linksCount').textContent = 'Link Đã Tách (0)';
+    document.getElementById('copyLinksBtn').disabled = true;
+    document.getElementById('replaceBtn').disabled = true;
+    document.getElementById('copyResultBtn').disabled = true;
+    
+    extractedLinks = [];
+    
+    console.log('✅ Đã reset');
+}
