@@ -1,4 +1,9 @@
-<!DOCTYPE html>
+// Thay thế links
+        function replaceLinks(autoTriggered = false) {
+            const originalText = document.getElementById('originalText').value;
+            const newLinksText = document.getElementById('newLinksText').value;
+
+            if (!originalText.trim()<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -310,17 +315,12 @@
         <div class="section">
             <div class="section-header step-3">
                 <span class="step-badge">3</span>
-                <span>Nhập Link Mới</span>
+                <span>Dán Link Mới (Tự Động Thay Thế)</span>
             </div>
-            <textarea id="newLinksText" placeholder="Dán link mới vào đây (hoặc bấm nút bên dưới)..."></textarea>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
-                <button id="pasteReplaceBtn" class="btn-warning" disabled>
-                    📋 Dán & Thay Thế
-                </button>
-                <button id="replaceBtn" class="btn-warning" disabled>
-                    ✨ Thay Thế
-                </button>
-            </div>
+            <textarea id="newLinksText" placeholder="Dán link mới vào đây → Tự động thay thế..."></textarea>
+            <button id="replaceBtn" class="btn-warning" disabled>
+                ✨ Thay Thế Thủ Công
+            </button>
         </div>
 
         <!-- Bước 4 -->
@@ -363,10 +363,20 @@
         document.getElementById('extractBtn').addEventListener('click', extractLinks);
         document.getElementById('copyLinksBtn').addEventListener('click', copyExtractedLinks);
         document.getElementById('shopeeConvertBtn').addEventListener('click', convertToShopee);
-        document.getElementById('pasteReplaceBtn').addEventListener('click', pasteAndReplace);
         document.getElementById('replaceBtn').addEventListener('click', replaceLinks);
         document.getElementById('copyResultBtn').addEventListener('click', copyResult);
         document.getElementById('resetBtn').addEventListener('click', resetAll);
+
+        // Tự động thay thế khi paste vào textarea
+        const newLinksTextarea = document.getElementById('newLinksText');
+        newLinksTextarea.addEventListener('paste', function() {
+            // Đợi paste hoàn tất rồi mới thay thế
+            setTimeout(() => {
+                if (newLinksTextarea.value.trim() && extractedLinks.length > 0) {
+                    replaceLinks();
+                }
+            }, 100);
+        });
 
         // Tách link
         function extractLinks() {
@@ -404,7 +414,6 @@
             linksCount.textContent = `Link Đã Tách (${extractedLinks.length})`;
             document.getElementById('copyLinksBtn').disabled = false;
             document.getElementById('shopeeConvertBtn').disabled = false;
-            document.getElementById('pasteReplaceBtn').disabled = false;
             document.getElementById('replaceBtn').disabled = false;
             showToast(`✅ Đã tách ${extractedLinks.length} link`);
         }
@@ -457,57 +466,7 @@
             document.body.removeChild(textarea);
         }
 
-        // Dán & Thay thế link (1 nút làm tất cả)
-        async function pasteAndReplace() {
-            const originalText = document.getElementById('originalText').value;
-
-            if (!originalText.trim()) {
-                showToast('⚠️ Chưa có nội dung gốc');
-                return;
-            }
-
-            try {
-                // Đọc clipboard
-                const clipboardText = await navigator.clipboard.readText();
-                
-                if (!clipboardText.trim()) {
-                    showToast('⚠️ Clipboard trống');
-                    return;
-                }
-
-                // Tách link mới từ clipboard
-                const urlRegex = /(https?:\/\/[^\s\)]+)/gi;
-                const newLinks = (clipboardText.match(urlRegex) || []).map(url => url.trim());
-
-                // Kiểm tra số lượng
-                if (newLinks.length !== extractedLinks.length) {
-                    showToast(`❌ Cần ${extractedLinks.length} link mới`);
-                    return;
-                }
-
-                // Thay thế
-                let result = originalText;
-                extractedLinks.forEach((oldLink, index) => {
-                    result = result.replace(oldLink, newLinks[index]);
-                });
-
-                // Hiển thị kết quả
-                const resultDisplay = document.getElementById('resultDisplay');
-                resultDisplay.className = 'result-display';
-                resultDisplay.textContent = result;
-                document.getElementById('copyResultBtn').disabled = false;
-
-                // Tự động fill vào textarea để user có thể xem
-                document.getElementById('newLinksText').value = clipboardText;
-
-                showToast('✅ Đã thay thế link!');
-            } catch (err) {
-                console.error('Lỗi đọc clipboard:', err);
-                showToast('❌ Không đọc được clipboard');
-            }
-        }
-
-        // Thay thế links (cách thủ công)
+        // Thay thế links
         function replaceLinks() {
             const originalText = document.getElementById('originalText').value;
             const newLinksText = document.getElementById('newLinksText').value;
@@ -566,7 +525,6 @@
             document.getElementById('linksCount').textContent = 'Link Đã Tách (0)';
             document.getElementById('copyLinksBtn').disabled = true;
             document.getElementById('shopeeConvertBtn').disabled = true;
-            document.getElementById('pasteReplaceBtn').disabled = true;
             document.getElementById('replaceBtn').disabled = true;
             document.getElementById('copyResultBtn').disabled = true;
             
